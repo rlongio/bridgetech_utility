@@ -1,0 +1,5 @@
+id,device_id,data,type,date
+1,QS2002,14,button_call,2021-01-13 13:11:00
+2,QS2002,12,button_call,2021-01-13 13:12:00
+3,QS2002,12,door_open,2021-01-13 13:13:00
+5,QS2002,14,door_open,2021-01-13 13:15:00
