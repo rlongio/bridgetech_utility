@@ -44,6 +44,15 @@ class ElevatorOperation:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {vars(self)}>"
 
+    def is_anamoly(self) -> bool:
+        if self._record.start is None or self._record.end is None:
+            return True
+        if self.button_to_open() > 60 * 10:
+            return True
+        if self.button_to_open() < 0:
+            return True
+        return False
+
     def button_to_open(self) -> int:
         """button_to_open returns the length in seconds between the time
         the button was called to the time the door was opened.
@@ -53,7 +62,7 @@ class ElevatorOperation:
         """
         if self._record.start is None or self._record.end is None:
             return -1
-        return int((self._record.start.date - self._record.end.date).total_seconds())
+        return int((self._record.end.date - self._record.start.date).total_seconds())
 
     def direction(self):
         """direction return True for up and False for down
@@ -71,11 +80,24 @@ class ElevatorOperations:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {vars(self)}>"
 
+    def __iter__(self):
+        return iter(self._operations)
+
     def average(self):
-        return statistics.mean(x.button_to_open() for x in self._operations)
+        try:
+            return statistics.mean(
+                x.button_to_open() for x in self._operations if not x.is_anamoly()
+            )
+        except Exception as e:
+            return -1
 
     def median(self):
-        return statistics.median(x.button_to_open() for x in self._operations)
+        try:
+            return statistics.median(
+                x.button_to_open() for x in self._operations if not x.is_anamoly()
+            )
+        except Exception as e:
+            return -1
 
     def print_report(self):
         for item in self._operations:
@@ -94,7 +116,6 @@ class ElevatorOperations:
 
         results: typing.List["ElevatorOperation"] = []
         start = None
-        end = None
         other = []
         for entry in [entry for x in floors for entry in x]:
             if entry.type == "button_call" and start is None:
@@ -105,27 +126,8 @@ class ElevatorOperations:
                 record = ElevatorOperationRecord(start, other, entry)
                 operation = ElevatorOperation(record)
                 results.append(operation)
-                start, other, end = None, [], None
+                start, other = None, []
         return ElevatorOperations(results)
-
-    @staticmethod
-    def sort_by_date():
-        pass
-
-    @staticmethod
-    def sort_by_floor():
-
-        results = []
-        for entry in entries:
-            start = None
-            end = None
-            other = []
-            if entry.type == "button_call" and start is None:
-                start = entry
-            elif entry.type == "button_call" and start is not None:
-                other.append(entry)
-            else:
-                results.append(ElevatorOperationRecord(start, other, end))
 
 
 class ElevatorLogEntry:
@@ -200,7 +202,7 @@ class ElevatorCall:
 
 if __name__ == "__main__":
 
-    input_path = "data/test.csv"
+    input_path = "data/query_result.csv"
     # input_path = input("Enter source file path...")
     # if not os.path.exists(input_path) or not os.path.isfile(input_path):
     #     print(f"file not found or invalid: {input_path}")
@@ -209,7 +211,12 @@ if __name__ == "__main__":
     with open(input_path) as csvfile:
         reader = csv.DictReader(csvfile)
         sorted_results = sorted(reader, key=operator.itemgetter("date"), reverse=True)
-        entries = ElevatorLogEntries([ElevatorLogEntry(**x) for x in sorted_results])
-        x = ElevatorOperations.from_log_entries(entries)
-        print(x.average())
-        print(x.median())
+        entries = ElevatorLogEntries(
+            [ElevatorLogEntry(**x) for x in sorted_results]
+        ).split_by_date()
+        for k, v in entries.items():
+            # test = ElevatorOperations.from_log_entries(v)
+            # [print(x, "\n") for x in test]
+            print(
+                f"{k}: average {round(ElevatorOperations.from_log_entries(v).average(), 2)} seconds   median: {round(ElevatorOperations.from_log_entries(v).median(), 2)} seconds"
+            )
