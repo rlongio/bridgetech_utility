@@ -5,6 +5,7 @@ import statistics
 import datetime
 import typing
 import bisect
+import collections
 
 """
 Attached a CSV of an elevator operation.
@@ -20,129 +21,111 @@ A few rules:
 The output should be per-day the Average and Median wait times for the elevator
 """
 
+"""
+* get list of values
+* sort by date
 
-class ElevatorLogEntries:
-    def __init__(self, list: typing.List["ElevatorLogEntry"]):
-        self._list = sorted(list, key=lambda x: x.date)
+iterate:
 
-    def __str__(self):
-        return f"length: {len(self._list)} entries: {self._list}"
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: length: {len(self._list)}>"
-
-    def append(self, entry: "ElevatorLogEntry"):
-        self._list.insert(
-            bisect.bisect_left(self._list, self._list.append(entry)), entry
-        )
-
-    def dates(self):
-        return {x.date.date() for x in self._list}
-
-    def datetimes(self):
-        return {x for x in self._list}
-
-    def floors(self):
-        return {x.floor for x in self._list}
-
-    def filter_date(self, _date: datetime.date):
-        return ElevatorLogEntries([x for x in self._list if x.date.date() == _date])
-
-    def filter_floor(self, floor: int):
-        return ElevatorLogEntries(
-            [x for x in self._list if abs(int(x.floor)) == int(floor)]
-        )
-
-    def split_by_date(self):
-        results: dict[datetime.date, ElevatorLogEntries] = {}
-        for _date in self.dates():
-            results[_date] = self.filter_date(_date)
-        return results
+if type is button_call:
+    results[floor]
+"""
 
 
-class ElevatorCall:
-    def __init__(self, entry: "ElevatorLogEntry"):
-        self.floor: int = entry.floor
-        self.button_call: datetime.datetime = entry.date
-        self.open_door: typing.Optional[datetime.datetime] = None
-        self.entries: typing.List[ElevatorLogEntry] = [entry]
-        self.is_complete: bool = False
+ElevatorOperationRecord = collections.namedtuple(
+    "ElevatorOpeartionRecord", ["start", "other", "end"]
+)
+
+
+class ElevatorOperation:
+    def __init__(self, record: ElevatorOperationRecord):
+        self._record = record
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {vars(self)}"
+        return f"<{self.__class__.__name__}: {vars(self)}>"
 
-    # def is_anamoly(self) -> bool:
-    #     """is_anamoly returns true if length of time
-    #     between button_call and door_open is longer
-    #     than 10 minutes.
+    def button_to_open(self) -> int:
+        """button_to_open returns the length in seconds between the time
+        the button was called to the time the door was opened.
 
-    #     Returns:
-    #         bool: True if button_to_open is longer than 10 minutes, False otherwise
-    #     """
-    #     return (self.button_to_open() / 60) > 10
-
-    # def button_to_open(self) -> int:
-    #     """button_to_open returns the length in seconds between the time
-    #     the button was called to the time the door was opened.
-
-    #     Returns:
-    #         int: [description]
-    #     """
-    #     if not self.is_complete:
-    #         return 0
-    #     assert self.button_call != None
-    #     assert self.open_door != None
-    #     return int((self.button_call - self.open_door).total_seconds())
-
-    # def direction(self):
-    #     """direction return True for up and False for down
-
-    #     Returns:
-    #         bool:
-    #     """
-    #     if self.to < 1:
-    #         return False
-    #     return True
-
-    def add_entry(self, entry: "ElevatorLogEntry"):
-        """add_entry adds an entry to the elevator call
-
-        The method will dynamically send the entry to the correct
-        set function based on type.
-
-        Args:
-            entry (ElevatorLogEntry): log entry
+        Returns:
+            int: [description]
         """
-        self.entries.append(entry)
-        type_map = {
-            "button_call": self._add_button_call,
-            "door_open": self._set_open_door,
-        }
-        type_map[entry.type](entry)
+        if self._record.start is None or self._record.end is None:
+            return -1
+        return int((self._record.start.date - self._record.end.date).total_seconds())
 
-    def _add_button_call(self, entry: "ElevatorLogEntry"):
-        """add_button_call adds the entry to the call stack and sets
-        the button call to the entry.date if it is less than the current
-        self.button_call
+    def direction(self):
+        """direction return True for up and False for down
 
-        Args:
-            entry (ElevatorLogEntry): log entry
+        Returns:
+            bool:
         """
-        self.button_call = (
-            entry.date
-            if self.button_call.timestamp() > entry.date.timestamp()
-            else self.button_call
-        )
+        return bool(self._record.start.floor)
 
-    def _set_open_door(self, entry: "ElevatorLogEntry"):
-        """set_open_door sets the time the door was opened
-        and marks the call completed
 
-        Args:
-            entry (ElevatorLogEntry): log entry
-        """
-        self.open_door = entry.date
-        self.is_complete = True
+class ElevatorOperations:
+    def __init__(self, operations: typing.List["ElevatorOperation"]):
+        self._operations = operations
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {vars(self)}>"
+
+    def average(self):
+        return statistics.mean(x.button_to_open() for x in self._operations)
+
+    def median(self):
+        return statistics.median(x.button_to_open() for x in self._operations)
+
+    def print_report(self):
+        for item in self._operations:
+            print(item._record)
+            print(item.button_to_open())
+
+    @staticmethod
+    def from_log_entries(entries: "ElevatorLogEntries") -> "ElevatorOperations":
+        dates: list[ElevatorLogEntries] = [
+            entry for entry in entries.split_by_date().values()
+        ]
+
+        floors: list[ElevatorLogEntries] = [
+            x for _date in dates for x in _date.split_by_floor().values()
+        ]
+
+        results: typing.List["ElevatorOperation"] = []
+        start = None
+        end = None
+        other = []
+        for entry in [entry for x in floors for entry in x]:
+            if entry.type == "button_call" and start is None:
+                start = entry
+            elif entry.type == "button_call" and start is not None:
+                other.append(entry)
+            else:
+                record = ElevatorOperationRecord(start, other, entry)
+                operation = ElevatorOperation(record)
+                results.append(operation)
+                start, other, end = None, [], None
+        return ElevatorOperations(results)
+
+    @staticmethod
+    def sort_by_date():
+        pass
+
+    @staticmethod
+    def sort_by_floor():
+
+        results = []
+        for entry in entries:
+            start = None
+            end = None
+            other = []
+            if entry.type == "button_call" and start is None:
+                start = entry
+            elif entry.type == "button_call" and start is not None:
+                other.append(entry)
+            else:
+                results.append(ElevatorOperationRecord(start, other, end))
 
 
 class ElevatorLogEntry:
@@ -153,6 +136,63 @@ class ElevatorLogEntry:
         self.type = type
         self._date = date
         self.date = datetime.datetime.strptime(self._date, "%Y-%m-%d %H:%M:%S")
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {vars(self)}"
+
+
+class ElevatorLogEntries:
+    def __init__(self, list: typing.List["ElevatorLogEntry"]):
+        self._list = sorted(list, key=lambda x: x.date)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self._list}>"
+
+    def __iter__(self):
+        return self._list.__iter__()
+
+    def append(self, entry: "ElevatorLogEntry"):
+        self._list.insert(
+            bisect.bisect_left(self._list, self._list.append(entry)), entry
+        )
+
+    def dates(self) -> set[datetime.date]:
+        return {x.date.date() for x in self._list}
+
+    def datetimes(self) -> set[datetime.datetime]:
+        return {x.date for x in self._list}
+
+    def floors(self) -> set[int]:
+        return {x.floor for x in self._list}
+
+    def filter_date(self, _date: datetime.date) -> "ElevatorLogEntries":
+        return ElevatorLogEntries([x for x in self._list if x.date.date() == _date])
+
+    def filter_floor(self, floor: int) -> "ElevatorLogEntries":
+        return ElevatorLogEntries(
+            [x for x in self._list if abs(int(x.floor)) == int(floor)]
+        )
+
+    def split_by_date(self) -> dict[datetime.date, "ElevatorLogEntries"]:
+        results: dict[datetime.date, ElevatorLogEntries] = {}
+        for _date in self.dates():
+            results[_date] = self.filter_date(_date)
+        return results
+
+    def split_by_floor(self) -> dict[int, "ElevatorLogEntries"]:
+        results: dict[int, ElevatorLogEntries] = {}
+        for floor in self.floors():
+            results[floor] = self.filter_floor(floor)
+        return results
+
+
+class ElevatorCall:
+    def __init__(self, entry: "ElevatorLogEntry"):
+        self.floor: int = entry.floor
+        self.button_call: datetime.datetime = entry.date
+        self.open_door: typing.Optional[datetime.datetime] = None
+        self.entries: typing.List[ElevatorLogEntry] = [entry]
+        self.is_complete: bool = False
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {vars(self)}"
@@ -170,30 +210,6 @@ if __name__ == "__main__":
         reader = csv.DictReader(csvfile)
         sorted_results = sorted(reader, key=operator.itemgetter("date"), reverse=True)
         entries = ElevatorLogEntries([ElevatorLogEntry(**x) for x in sorted_results])
-        print(entries.floors())
-        print(entries.filter_floor(12))
-        print(entries.filter_date(datetime.datetime(2020, 1, 13, 13, 13)))
-        for k, v in entries.split_by_date().items():
-            print("*" * 10)
-            print(k, v)
-            print("*" * 10)
-        exit()
-    # for idx, row in enumerate(sorted_results):
-    #     entry = ElevatorLogEntry(**row)
-    #     if len(results) < 1 or results[len(results) - 1].is_complete == True:
-    #         # if we instantiate with door_open, we know it was a test
-    #         if entry.type == "door_open":
-    #             continue
-    #         else:
-    #             results.append(ElevatorCall(entry))
-    #     else:
-    #         result = results[len(results) - 1].add_entry(entry)
-    # x = [
-    #     result.button_to_open() / 60
-    #     for result in results
-    #     if result.is_anamoly() is False
-    # ]
-    # print(results)
-    # print(x)
-    # print(f"Median: {round(statistics.median(x), 4)}")
-    # print(f"Average: {round(statistics.mean(x), 4)}")
+        x = ElevatorOperations.from_log_entries(entries)
+        print(x.average())
+        print(x.median())
