@@ -154,7 +154,7 @@ class ElevatorLogEntries:
             bisect.bisect_left(self._list, self._list.append(entry)), entry
         )
 
-    def dates(self) -> set[datetime.date]:
+    def dates(self) -> typing.Set[datetime.date]:
         """dates returns a set of dates for each log entry in the container
 
         Returns:
@@ -162,7 +162,7 @@ class ElevatorLogEntries:
         """
         return {x.date.date() for x in self._list}
 
-    def datetimes(self) -> set[datetime.datetime]:
+    def datetimes(self) -> typing.Set[datetime.datetime]:
         """datetimes returns a set of datetimes for each log entry in the container
 
         Returns:
@@ -170,7 +170,7 @@ class ElevatorLogEntries:
         """
         return {x.date for x in self._list}
 
-    def floors(self) -> set[int]:
+    def floors(self) -> typing.Set[int]:
         """floors returns a set of floors for each log entry in the container
 
         Returns:
