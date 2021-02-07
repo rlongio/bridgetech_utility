@@ -1,3 +1,10 @@
+"""
+Utility for caluclating the average and median of elevator operations.
+
+Author: Ryan Long
+Email: ryan@rlong.io
+"""
+
 import csv
 import operator
 import statistics
@@ -246,10 +253,10 @@ if __name__ == "__main__":
         """load_entries_from_csv loads elevator log entries from a csv file.
 
         Args:
-            input_path (str): [description]
+            input_path (str): path as string
 
         Returns:
-            [type]: [description]
+            List: entries
         """
         with open(input_path) as csvfile:
             reader = csv.DictReader(csvfile)
