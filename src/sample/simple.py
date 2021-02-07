@@ -205,26 +205,26 @@ class ElevatorLogEntries:
             [x for x in self._list if abs(int(x.floor)) == int(floor)]
         )
 
-    def split_by_date(self) -> dict[datetime.date, "ElevatorLogEntries"]:
+    def split_by_date(self) -> typing.Dict[datetime.date, "ElevatorLogEntries"]:
         """split_by_date returns a dictionary with keys as unique dates
         and value as ElevatorLogEntries corresponding to the date key.
 
         Returns:
             ElevatorLogEntries: entries
         """
-        results: dict[datetime.date, ElevatorLogEntries] = {}
+        results: typing.Dict[datetime.date, ElevatorLogEntries] = {}
         for _date in self.dates():
             results[_date] = self.filter_date(_date)
         return results
 
-    def split_by_floor(self) -> dict[int, "ElevatorLogEntries"]:
+    def split_by_floor(self) -> typing.Dict[int, "ElevatorLogEntries"]:
         """split_by_floor returns a dictionary with keys as unique floors
         and value as ElevatorLogEntries corresponding to the floor key.
 
         Returns:
             ElevatorLogEntries: entries
         """
-        results: dict[int, ElevatorLogEntries] = {}
+        results: typing.Dict[int, ElevatorLogEntries] = {}
         for floor in self.floors():
             results[floor] = self.filter_floor(floor)
         return results
