@@ -263,11 +263,19 @@ if __name__ == "__main__":
             return sorted(reader, key=operator.itemgetter("date"), reverse=True)
 
     input_path = get_user_input_file_path()
+    output_path = "output.csv"
 
-    entries = ElevatorLogEntries(
-        [ElevatorLogEntry(**x) for x in load_entries_from_csv(input_path)]
-    ).split_by_date()
-    for k, v in entries.items():
-        print(
-            f"{k}: average {round(ElevatorOperations.from_log_entries(v).average(), 2)} seconds   median: {round(ElevatorOperations.from_log_entries(v).median(), 2)} seconds"
-        )
+    with open(output_path, "w", newline="") as output_file:
+        csv_writer = csv.writer(output_file, delimiter=",", quoting=csv.QUOTE_MINIMAL)
+        entries = ElevatorLogEntries(
+            [ElevatorLogEntry(**x) for x in load_entries_from_csv(input_path)]
+        ).split_by_date()
+        csv_writer.writerow(["Date", "Average", "Median"])
+        results = []
+        for k, v in entries.items():
+            average = round(ElevatorOperations.from_log_entries(v).average(), 2)
+            median = round(ElevatorOperations.from_log_entries(v).median(), 2)
+            results.append([k, average, median])
+            # csv_writer.writerow([k, average, median])
+
+        csv_writer.writerows(sorted(results, key=lambda x: x[0], reverse=True))
